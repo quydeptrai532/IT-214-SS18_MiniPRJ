@@ -1,0 +1,83 @@
+# Hạ tầng chạy local cho RikkeiBank (Docker).
+#   docker compose up -d
+#
+# Nếu máy đã có sẵn MySQL / Redis thì có thể bỏ các service tương ứng,
+# và truyền biến môi trường DB_PASSWORD cho phù hợp khi chạy service.
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: rikkeibank-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-p123456" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ============ Kafka ở chế độ KRaft (không cần ZooKeeper) ============
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: rikkeibank-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      CLUSTER_ID: rikkeibank-kraft-cluster-01
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  # Tạo sẵn 2 topic của hệ thống
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: rikkeibank-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: >
+      "kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists
+         --topic rikkeibank.transaction.events --partitions 3 --replication-factor 1 &&
+       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists
+         --topic rikkeibank.account.events --partitions 3 --replication-factor 1 &&
+       echo '=== Danh sach topic ===' &&
+       kafka-topics --bootstrap-server kafka:9092 --list"
+
+  # ============ Redis: cache + danh sách token bị thu hồi ============
+  redis:
+    image: redis:7-alpine
+    container_name: rikkeibank-redis
+    ports:
+      - "6379:6379"
+    command: [ "redis-server", "--appendonly", "yes" ]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:
+  redis_data:

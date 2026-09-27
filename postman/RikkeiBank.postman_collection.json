@@ -1,0 +1,342 @@
+{
+  "info": {
+    "name": "RikkeiBank API",
+    "description": "Collection đầy đủ các API của hệ thống ngân hàng số RikkeiBank.\nTất cả request đi qua API Gateway: http://localhost:8080\n\nTHỨ TỰ CHẠY:\n1. Chạy 'Dang nhap ADMIN' -> biến accessToken được lưu tự động\n2. Chạy các API còn lại\n\nTài khoản mẫu: admin/admin123, teller01/teller123, customer01/customer123",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Identity Service (Xac thuc / Phan quyen)",
+      "item": [
+        {
+          "name": "Dang nhap ADMIN (luu token tu dong)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.accessToken) { pm.collectionVariables.set('accessToken', body.accessToken); }",
+                  "if (body.refreshToken) { pm.collectionVariables.set('refreshToken', body.refreshToken); }",
+                  "pm.test('Dang nhap thanh cong (200)', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/identity/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "identity", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Dang ky khach hang moi (cong khai)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"customer09\",\n  \"password\": \"customer123\",\n  \"fullName\": \"Le Van C\",\n  \"email\": \"c@rikkeibank.vn\",\n  \"role\": \"CUSTOMER\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/identity/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "identity", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Lam moi access token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/identity/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "identity", "auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Thong tin nguoi dang nhap",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/identity/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "identity", "auth", "me"] }
+          }
+        },
+        {
+          "name": "Danh sach nguoi dung (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/identity/users", "host": ["{{baseUrl}}"], "path": ["api", "identity", "users"] }
+          }
+        },
+        {
+          "name": "THU HOI QUYEN TRUY CAP - Ep dang xuat (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/identity/users/3/force-logout", "host": ["{{baseUrl}}"], "path": ["api", "identity", "users", "3", "force-logout"] }
+          }
+        },
+        {
+          "name": "Dang xuat phien hien tai",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/identity/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "identity", "auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Customer Service (Khach hang / Nhan vien / Loai TK)",
+      "item": [
+        {
+          "name": "Danh sach khach hang",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/customers", "host": ["{{baseUrl}}"], "path": ["api", "customers"] }
+          }
+        },
+        {
+          "name": "Chi tiet khach hang (cache - goi 2 lan de thay log chi query DB 1 lan)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/customers/1", "host": ["{{baseUrl}}"], "path": ["api", "customers", "1"] }
+          }
+        },
+        {
+          "name": "Tao khach hang (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Pham Van D\",\n  \"identityNumber\": \"012345678999\",\n  \"email\": \"d@rikkeibank.vn\",\n  \"phone\": \"0987654321\",\n  \"address\": \"Ha Noi\",\n  \"dateOfBirth\": \"1995-05-20\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/customers", "host": ["{{baseUrl}}"], "path": ["api", "customers"] }
+          }
+        },
+        {
+          "name": "Cap nhat khach hang (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Pham Van D (da sua)\",\n  \"identityNumber\": \"012345678999\",\n  \"email\": \"d@rikkeibank.vn\",\n  \"phone\": \"0987654321\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/customers/1", "host": ["{{baseUrl}}"], "path": ["api", "customers", "1"] }
+          }
+        },
+        {
+          "name": "Xoa khach hang (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/customers/5", "host": ["{{baseUrl}}"], "path": ["api", "customers", "5"] }
+          }
+        },
+        {
+          "name": "Danh sach nhan vien (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/staffs", "host": ["{{baseUrl}}"], "path": ["api", "staffs"] }
+          }
+        },
+        {
+          "name": "Tao nhan vien (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Giao dich vien 02\",\n  \"email\": \"teller02@rikkeibank.vn\",\n  \"phone\": \"0912345678\",\n  \"branch\": \"HCM\",\n  \"position\": \"TELLER\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/staffs", "host": ["{{baseUrl}}"], "path": ["api", "staffs"] }
+          }
+        },
+        {
+          "name": "Danh sach loai tai khoan",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/account-types", "host": ["{{baseUrl}}"], "path": ["api", "account-types"] }
+          }
+        },
+        {
+          "name": "Tao loai tai khoan (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"SAVING\",\n  \"name\": \"Tiet kiem\",\n  \"description\": \"Tai khoan tiet kiem ky han\",\n  \"minimumBalance\": 1000000,\n  \"active\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/api/account-types", "host": ["{{baseUrl}}"], "path": ["api", "account-types"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Account Service (Tai khoan & So du)",
+      "item": [
+        {
+          "name": "Mo tai khoan moi",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": 1,\n  \"accountTypeId\": 1,\n  \"initialBalance\": 50000000,\n  \"currency\": \"VND\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/accounts", "host": ["{{baseUrl}}"], "path": ["api", "accounts"] }
+          }
+        },
+        {
+          "name": "Chi tiet tai khoan (CACHE - goi 2 lan)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/1", "host": ["{{baseUrl}}"], "path": ["api", "accounts", "1"] }
+          }
+        },
+        {
+          "name": "Xem so du",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/1/balance", "host": ["{{baseUrl}}"], "path": ["api", "accounts", "1", "balance"] }
+          }
+        },
+        {
+          "name": "Tai khoan cua khach hang",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/customer/1", "host": ["{{baseUrl}}"], "path": ["api", "accounts", "customer", "1"] }
+          }
+        },
+        {
+          "name": "Khoa / mo khoa tai khoan (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/1/status?status=LOCKED", "host": ["{{baseUrl}}"], "path": ["api", "accounts", "1", "status"], "query": [{ "key": "status", "value": "LOCKED" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Transaction Service (Saga chuyen khoan)",
+      "item": [
+        {
+          "name": "Chuyen khoan THANH CONG",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fromAccountId\": 1,\n  \"toAccountId\": 2,\n  \"amount\": 1000000,\n  \"description\": \"Chuyen tien thang 11\",\n  \"idempotencyKey\": \"TRANSFER-DEMO-0001\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/transactions/transfer", "host": ["{{baseUrl}}"], "path": ["api", "transactions", "transfer"] }
+          }
+        },
+        {
+          "name": "Chuyen khoan GAY LOI -> kich hoat BU TRU (rollback)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fromAccountId\": 1,\n  \"toAccountId\": 2,\n  \"amount\": 999999999,\n  \"description\": \"Co tinh vuot so du de kich hoat compensating\",\n  \"idempotencyKey\": \"TRANSFER-ROLLBACK-0001\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/transactions/transfer", "host": ["{{baseUrl}}"], "path": ["api", "transactions", "transfer"] }
+          }
+        },
+        {
+          "name": "Chi tiet giao dich (kem cac buoc Saga)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transactions/1", "host": ["{{baseUrl}}"], "path": ["api", "transactions", "1"] }
+          }
+        },
+        {
+          "name": "Giao dich trong ngay (TELLER)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transactions/today", "host": ["{{baseUrl}}"], "path": ["api", "transactions", "today"] }
+          }
+        },
+        {
+          "name": "Tat ca giao dich (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transactions", "host": ["{{baseUrl}}"], "path": ["api", "transactions"] }
+          }
+        },
+        {
+          "name": "Lich su giao dich cua tai khoan",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transactions/account/1", "host": ["{{baseUrl}}"], "path": ["api", "transactions", "account", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Notification Service (Kafka event-driven)",
+      "item": [
+        {
+          "name": "Thong bao cua toi",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/notifications/me", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "me"] }
+          }
+        },
+        {
+          "name": "Tat ca thong bao (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/notifications", "host": ["{{baseUrl}}"], "path": ["api", "notifications"] }
+          }
+        },
+        {
+          "name": "So luong thong bao da nhan tu Kafka",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/notifications/count", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "count"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Kiem tra bao mat (phai tra 401/403)",
+      "item": [
+        {
+          "name": "Goi API tai chinh KHONG co token -> 401",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/accounts/1", "host": ["{{baseUrl}}"], "path": ["api", "accounts", "1"] }
+          }
+        },
+        {
+          "name": "CUSTOMER goi API quan tri -> 403",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/customers/1", "host": ["{{baseUrl}}"], "path": ["api", "customers", "1"] }
+          }
+        }
+      ]
+    }
+  ]
+}

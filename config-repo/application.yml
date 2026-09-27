@@ -1,0 +1,97 @@
+# ======================================================================
+# RikkeiBank - CẤU HÌNH DÙNG CHUNG CHO TOÀN HỆ THỐNG (Config Server phân phát)
+# Mọi service đều đọc file này trước, sau đó đọc tiếp <spring.application.name>.yml
+# ======================================================================
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+
+spring:
+  # ---------- Kafka (giao tiếp bất đồng bộ / event-driven) ----------
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        # KHÔNG gửi kèm header __TypeId__: cả hệ thống dùng chung class BankEvent
+        # (nằm trong common-lib) nên không cần header kiểu dữ liệu.
+        spring.json.add.type.headers: false
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.rikkeibank.*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.rikkeibank.common.event.BankEvent
+
+  # ---------- Redis (distributed caching + thu hồi token) ----------
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+
+# ---------- JWT (dùng chung secret cho mọi service) ----------
+rikkeibank:
+  jwt:
+    # Tối thiểu 32 ký tự (HS256). Production phải đặt trong biến môi trường / vault, KHÔNG commit thật.
+    secret: ${JWT_SECRET:RikkeiBankSuperSecretKeyForJwtSigning2026HS256}
+    issuer: rikkeibank-api
+    # Access token ngắn hạn; refresh token dài hạn để khách không phải đăng nhập lại liên tục
+    access-token-ttl: 30m
+    refresh-token-ttl: 7d
+  cache:
+    account-ttl: 5m
+
+# ---------- Resilience4j: chống lỗi dây chuyền ----------
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+    instances:
+      account-service:
+        base-config: default
+      customer-service:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+        cancel-running-future: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers,circuitbreakerevents
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.rikkeibank: DEBUG
+    org.springframework.kafka: WARN
+    org.apache.kafka: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"

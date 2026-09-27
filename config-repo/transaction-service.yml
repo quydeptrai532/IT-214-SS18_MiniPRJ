@@ -1,0 +1,23 @@
+server:
+  port: 8084
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/rikkeibank_transaction?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+# Bật tích hợp Circuit Breaker của Spring Cloud với Feign
+spring.cloud.openfeign:
+  circuitbreaker:
+    enabled: true
+    group:
+      enabled: true
+logging:
+  level:
+    com.rikkeibank.transaction: DEBUG
+    io.github.resilience4j: INFO

@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:http://localhost:8888
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+      routes:
+        # ---------- identity-service: đăng nhập / người dùng / phân quyền ----------
+        - id: identity-service
+          uri: lb://identity-service
+          predicates:
+            - Path=/api/identity/**
+          filters:
+            - AddResponseHeader=X-Gateway-Route, identity-service
+
+        # ---------- customer-service: khách hàng, nhân viên, loại tài khoản ----------
+        - id: customer-service
+          uri: lb://customer-service
+          predicates:
+            - Path=/api/customers/**,/api/staffs/**,/api/account-types/**
+          filters:
+            - AddResponseHeader=X-Gateway-Route, customer-service
+
+        # ---------- account-service: tài khoản & số dư ----------
+        - id: account-service
+          uri: lb://account-service
+          predicates:
+            - Path=/api/accounts/**
+          filters:
+            - AddResponseHeader=X-Gateway-Route, account-service
+
+        # ---------- transaction-service: chuyển khoản (Saga) & lịch sử giao dịch ----------
+        - id: transaction-service
+          uri: lb://transaction-service
+          predicates:
+            - Path=/api/transactions/**
+          filters:
+            - AddResponseHeader=X-Gateway-Route, transaction-service
+
+        # ---------- notification-service: thông báo (đọc từ Kafka) ----------
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - AddResponseHeader=X-Gateway-Route, notification-service

@@ -1,0 +1,23 @@
+server:
+  port: 8083
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/rikkeibank_account?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        # Bật optimistic locking cho cột @Version -> chống mất tiền khi ghi đồng thời
+        jdbc:
+          batch_size: 20
+  cache:
+    type: redis
+logging:
+  level:
+    com.rikkeibank.account: DEBUG

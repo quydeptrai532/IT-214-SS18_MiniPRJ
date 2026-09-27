@@ -1,0 +1,9 @@
+server:
+  port: 8085
+spring:
+  main:
+    web-application-type: reactive
+logging:
+  level:
+    com.rikkeibank.notification: DEBUG
+    reactor.kafka: INFO
