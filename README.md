@@ -119,3 +119,4 @@ sau khi chạy request đăng nhập.
 - **Đăng xuất lâu dài**: refresh token 7 ngày, access token 30 phút → khách không phải đăng nhập lại liên tục.
 - **Hạn chế đã biết**: Kafka phải chạy qua docker-compose; nếu chấm offline, chạy `mvn test`
   vẫn được vì unit test dùng mock/H2, không cần broker.
+a
